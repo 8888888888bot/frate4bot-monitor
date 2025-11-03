@@ -1,8 +1,8 @@
 # bot.py
 import asyncio
 import logging
-from telegram import Bot
-from telegram.error import TelegramError
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
 
 from config import (
     TELEGRAM_BOT_TOKEN,
@@ -24,67 +24,82 @@ logger = logging.getLogger(__name__)
 
 PAIRS = [p.strip() for p in MONITORED_PAIRS.split(",")]
 
-async def send_alert(message: str):
-    """Отправка оповещения в Telegram"""
-    try:
-        bot = Bot(token=TELEGRAM_BOT_TOKEN)
-        await bot.send_message(chat_id=ALERT_CHAT_ID, text=message, parse_mode="Markdown")
-        logger.info(f"Alert sent: {message}")
-    except TelegramError as e:
-        logger.error(f"Failed to send Telegram alert: {e}")
+# ===== Команды бота =====
 
-async def monitor_funding_rates():
-    """Основной цикл мониторинга ставок финансирования"""
-    logger.info("Starting funding rate monitor...")
-    while True:
-        try:
-            rates = get_funding_rates()
-            logger.debug(f"Funding rates fetched: {rates}")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Привет! Я бот мониторинга ставок финансирования.\nИспользуй /status для просмотра текущих ставок.")
 
-            for pair in PAIRS:
-                if pair not in rates:
-                    logger.warning(f"Pair {pair} not found in funding rates data")
-                    continue
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("/start - Начать работу\n/status - Текущие ставки\n/help - Помощь")
 
-                rate = float(rates[pair].get("rate", 0))
+async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    rates = get_funding_rates()
+    if not rates:
+        await update.message.reply_text("Не удалось получить данные.")
+        return
 
-                alert_msg = None
+    message = "📊 Текущие ставки финансирования:\n\n"
+    for pair in PAIRS:
+        if pair in rates:
+            rate = rates[pair]["rate"]
+            message += f"{pair}: {rate:.6f}\n"
+        else:
+            message += f"{pair}: N/A\n"
+    await update.message.reply_text(f"```\n{message}\n```", parse_mode="Markdown")
 
-                if rate <= CRITICAL_FR_LONG:
-                    alert_msg = (
-                        f"🚨 *LONG CRITICAL ALERT*\n"
-                        f"Pair: `{pair}`\n"
-                        f"Funding Rate: `{rate:.6f}`\n"
-                        f"Threshold: `{CRITICAL_FR_LONG}`"
-                    )
-                elif rate >= CRITICAL_FR_SHORT:
-                    alert_msg = (
-                        f"🚨 *SHORT CRITICAL ALERT*\n"
-                        f"Pair: `{pair}`\n"
-                        f"Funding Rate: `{rate:.6f}`\n"
-                        f"Threshold: `{CRITICAL_FR_SHORT}`"
-                    )
+# ===== Мониторинг в фоне =====
 
-                if alert_msg:
-                    await send_alert(alert_msg)
+async def monitor_funding_rates(context: ContextTypes.DEFAULT_TYPE):
+    """Фоновый мониторинг ставок"""
+    rates = get_funding_rates()
+    logger.debug(f"Funding rates fetched: {rates}")
 
-            logger.info(f"Completed monitoring cycle. Sleeping for {UPDATE_INTERVAL} seconds...")
+    for pair in PAIRS:
+        if pair not in rates:
+            logger.warning(f"Pair {pair} not found in funding rates data")
+            continue
 
-        except Exception as e:
-            logger.error(f"Error in monitoring loop: {e}", exc_info=True)
+        rate = float(rates[pair].get("rate", 0))
+        alert_msg = None
 
-        await asyncio.sleep(UPDATE_INTERVAL)
+        if rate <= CRITICAL_FR_LONG:
+            alert_msg = (
+                f"🚨 *LONG CRITICAL ALERT*\n"
+                f"Pair: `{pair}`\n"
+                f"Funding Rate: `{rate:.6f}`\n"
+                f"Threshold: `{CRITICAL_FR_LONG}`"
+            )
+        elif rate >= CRITICAL_FR_SHORT:
+            alert_msg = (
+                f"🚨 *SHORT CRITICAL ALERT*\n"
+                f"Pair: `{pair}`\n"
+                f"Funding Rate: `{rate:.6f}`\n"
+                f"Threshold: `{CRITICAL_FR_SHORT}`"
+            )
+
+        if alert_msg:
+            try:
+                await context.bot.send_message(chat_id=ALERT_CHAT_ID, text=alert_msg, parse_mode="Markdown")
+                logger.info(f"Alert sent: {alert_msg}")
+            except Exception as e:
+                logger.error(f"Failed to send alert: {e}")
+
+# ===== Основная функция =====
 
 def main():
-    """Точка входа для Heroku worker"""
-    logger.info("Bot worker starting...")
-    try:
-        asyncio.run(monitor_funding_rates())
-    except KeyboardInterrupt:
-        logger.info("Bot worker stopped by user.")
-    except Exception as e:
-        logger.critical(f"Bot worker crashed: {e}", exc_info=True)
-        raise
+    """Запуск бота с обработчиками и фоновым мониторингом"""
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+    # Команды
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("status", status))
+
+    # Фоновый мониторинг каждые UPDATE_INTERVAL секунд
+    application.job_queue.run_repeating(monitor_funding_rates, interval=UPDATE_INTERVAL)
+
+    logger.info("Bot is starting...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
     main()
