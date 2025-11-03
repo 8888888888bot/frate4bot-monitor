@@ -87,12 +87,4 @@ def main():
         raise
 
 if __name__ == "__main__":
-    main()        asyncio.run(monitor_funding_rates())
-    except KeyboardInterrupt:
-        logger.info("Bot worker stopped by user.")
-    except Exception as e:
-        logger.critical(f"Bot worker crashed: {e}", exc_info=True)
-        raise
-
-if __name__ == "__main__":
     main()
