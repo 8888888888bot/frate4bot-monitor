@@ -95,7 +95,7 @@ def main():
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("status", status))
 
-    # Фоновый мониторинг каждые UPDATE_INTERVAL секунд
+    # Запуск фонового мониторинга (после запуска приложения)
     application.job_queue.run_repeating(monitor_funding_rates, interval=UPDATE_INTERVAL)
 
     logger.info("Bot is starting...")
