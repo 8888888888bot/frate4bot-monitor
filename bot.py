@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Global bot app reference for job access
+# Глобальная переменная для доступа к приложению
 application = None
 
 async def send_funding_alerts(context: ContextTypes.DEFAULT_TYPE):
@@ -66,22 +66,34 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("\n".join(lines))
 
 async def post_init(application: Application):
-    # Schedule recurring job using job_queue
+    # Убедимся, что job_queue доступен
+    if application.job_queue is None:
+        logger.error("Job queue is None!")
+        return
     application.job_queue.run_repeating(
         send_funding_alerts,
         interval=UPDATE_INTERVAL,
-        first=10  # First check after 10 seconds
+        first=10  # Первый запуск через 10 секунд
     )
-    logger.info("Monitoring job scheduled.")
+    logger.info(f"✅ Monitoring scheduled every {UPDATE_INTERVAL} seconds.")
 
 def main():
     global application
+    # Создаём приложение и передаём post_init
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
 
-    # Command handlers
+    # Добавляем обработчики команд
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler("help", cmd_help))
     application.add_handler(CommandHandler("status", cmd_status))
+
+    logger.info("🚀 Bot is starting...")
+
+    # Запускаем polling
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == '__main__':
+    main()    application.add_handler(CommandHandler("status", cmd_status))
 
     logger.info("Starting bot polling...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
