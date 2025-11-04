@@ -61,24 +61,7 @@ def load_data_from_gist():
 
 def save_data_to_gist(data):
     if not GITHUB_TOKEN or not GITHUB_GIST_ID:
-        logging.warning("GITHUB_TOKEN or GITHUB_GIST_ID not set. Skip saving.")
-        return False
-    try:
-        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-        payload = {
-            "files": {
-                "frate4bot-data.json": {
-                    "content": json.dumps(data, indent=2, ensure_ascii=False)
-                }
-            }
-        }
-        response = requests.patch(GIST_URL, headers=headers, json=payload, timeout=10)
-        response.raise_for_status()
-        logging.info("✅ Data saved to Gist")
-        return True
-    except Exception as e:
-        logging.error(f"❌ Failed to save to Gist: {e}")
-        return False
+        logging.warning("GITHUB_TOKEN or GITHUB        return False
 
 # ======================
 # INIT DATA
