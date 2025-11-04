@@ -362,7 +362,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await show_settings(query, context)
 
 async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if "awaiting_pair" not in context.user_
+    if "awaiting_pair" not in context.user_data:  # ✅ Есть двоеточие и .user_data
         return
 
     action = context.user_data["awaiting_pair"]
