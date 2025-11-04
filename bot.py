@@ -153,7 +153,7 @@ def format_funding_rate(pair: str, fr: float) -> str:
     return f"{pair}: {fr:.6f} {emoji} {trend}"
 
 # ======================
-# MAIN MENU (БЕЗ ДУБЛЕЙ!)
+# MAIN MENU
 # ======================
 
 MAIN_MENU = ReplyKeyboardMarkup(
@@ -276,35 +276,90 @@ async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- Settings ---
 async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    alerts_status = "✅ ВКЛ" if user_settings["alerts_enabled"] else "❌ ВЫКЛ"
-    pairs_list = ", ".join(sorted(user_settings["monitored_pairs"])) or "—"
+    # Получаем список всех доступных пар (можно кэшировать)
+    rates = get_funding_rates()
+    all_pairs = sorted(rates.keys()) if rates else []
 
-    keyboard = [
-        [InlineKeyboardButton(alerts_status, callback_data="toggle_alerts")],
-        [
-            InlineKeyboardButton("📉 LONG", callback_data="long_info"),
-            InlineKeyboardButton(f"{user_settings['critical_fr_long']:.4f}", callback_data="long_val")
-        ],
-        [
-            InlineKeyboardButton("📈 SHORT", callback_data="short_info"),
-            InlineKeyboardButton(f"{user_settings['critical_fr_short']:.4f}", callback_data="short_val")
-        ],
-        [InlineKeyboardButton("➕ Добавить пару", callback_data="add_pair")],
-        [InlineKeyboardButton("➖ Удалить пару", callback_data="remove_pair")],
-        [InlineKeyboardButton("🔄 Сбросить настройки", callback_data="reset_settings")]
+    # Формируем текст настроек
+    settings_text = (
+        "🔔 Настройки:\n"
+        f"Алерты: {'✅ ВКЛ' if user_settings['alerts_enabled'] else '❌ ВЫКЛ'}\n"
+        f"Пары: {', '.join(sorted(user_settings['monitored_pairs'])) or '—'}\n\n"
+        "Нажмите на кнопки для изменения:"
+    )
+
+    # Кнопки для LONG/SHORT
+    long_buttons = [
+        InlineKeyboardButton("➖", callback_data="long_dec"),
+        InlineKeyboardButton(f"{user_settings['critical_fr_long']:.4f}", callback_data="long_val"),
+        InlineKeyboardButton("➕", callback_data="long_inc")
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    if isinstance(update, Update):
-        await update.message.reply_text(
-            f"🔔 Настройки:\nАлерты: {alerts_status}\nПары: {pairs_list}\n\nНажмите на кнопки для изменения:",
-            reply_markup=reply_markup
-        )
-    else:
-        await update.callback_query.edit_message_text(
-            f"🔔 Настройки:\nАлерты: {alerts_status}\nПары: {pairs_list}\n\nНажмите на кнопки для изменения:",
-            reply_markup=reply_markup
-        )
+    short_buttons = [
+        InlineKeyboardButton("➖", callback_data="short_dec"),
+        InlineKeyboardButton(f"{user_settings['critical_fr_short']:.4f}", callback_data="short_val"),
+        InlineKeyboardButton("➕", callback_data="short_inc")
+    ]
 
+    # Кнопки для пар
+    add_button = InlineKeyboardButton("➕ Добавить пару", callback_data="add_pair_menu")
+    remove_button = InlineKeyboardButton("➖ Удалить пару", callback_data="remove_pair_menu")
+    reset_button = InlineKeyboardButton("🔄 Сбросить настройки", callback_data="reset_settings")
+
+    # Создаём клавиатуру
+    keyboard = [
+        [InlineKeyboardButton("⚙️ Алерты", callback_data="toggle_alerts")],
+        long_buttons,
+        short_buttons,
+        [add_button],
+        [remove_button],
+        [reset_button]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    if isinstance(update, Update):
+        await update.message.reply_text(settings_text, reply_markup=reply_markup)
+    else:
+        await update.callback_query.edit_message_text(settings_text, reply_markup=reply_markup)
+
+# --- INLINE MENU FOR ADDING PAIR ---
+async def show_add_pair_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    rates = get_funding_rates()
+    if not rates:
+        await update.callback_query.answer("Не удалось загрузить пары.", show_alert=True)
+        return
+
+    # Берём топ-20 пар по абсолютной ставке
+    sorted_pairs = sorted(rates.items(), key=lambda x: abs(x[1]), reverse=True)
+    top_pairs = [p for p, _ in sorted_pairs[:20]]
+
+    # Создаём кнопки для выбора пары
+    buttons = []
+    for pair in top_pairs:
+        buttons.append([InlineKeyboardButton(pair, callback_data=f"add_{pair}")])
+
+    # Добавляем кнопку "Назад"
+    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data="back_to_settings")])
+
+    reply_markup = InlineKeyboardMarkup(buttons)
+    await update.callback_query.edit_message_text("Выберите пару для добавления:", reply_markup=reply_markup)
+
+# --- INLINE MENU FOR REMOVING PAIR ---
+async def show_remove_pair_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not user_settings["monitored_pairs"]:
+        await update.callback_query.answer("Нет отслеживаемых пар.", show_alert=True)
+        return
+
+    buttons = []
+    for pair in sorted(user_settings["monitored_pairs"]):
+        buttons.append([InlineKeyboardButton(pair, callback_data=f"remove_{pair}")])
+
+    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data="back_to_settings")])
+
+    reply_markup = InlineKeyboardMarkup(buttons)
+    await update.callback_query.edit_message_text("Выберите пару для удаления:", reply_markup=reply_markup)
+
+# --- Button Handler ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -314,17 +369,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_settings["alerts_enabled"] = not user_settings["alerts_enabled"]
         save_to_gist()
     elif data == "long_val":
-        keyboard = [
-            [InlineKeyboardButton("–0.0001", callback_data="long_dec"), InlineKeyboardButton("+0.0001", callback_data="long_inc")]
-        ]
-        await query.edit_message_text("Изменить порог LONG:", reply_markup=InlineKeyboardMarkup(keyboard))
-        return
+        pass  # Это просто отображение значения
     elif data == "short_val":
-        keyboard = [
-            [InlineKeyboardButton("–0.0001", callback_data="short_dec"), InlineKeyboardButton("+0.0001", callback_data="short_inc")]
-        ]
-        await query.edit_message_text("Изменить порог SHORT:", reply_markup=InlineKeyboardMarkup(keyboard))
-        return
+        pass  # Это просто отображение значения
     elif data == "long_dec":
         user_settings["critical_fr_long"] -= 0.0001
         save_to_gist()
@@ -337,14 +384,28 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "short_inc":
         user_settings["critical_fr_short"] += 0.0001
         save_to_gist()
-    elif data == "add_pair":
-        await query.edit_message_text("Введите пару для добавления (например, BTC_USDT):")
-        context.user_data["awaiting_pair"] = "add"
+    elif data == "add_pair_menu":
+        await show_add_pair_menu(query, context)
         return
-    elif data == "remove_pair":
-        pairs = "\n".join(sorted(user_settings["monitored_pairs"]))
-        await query.edit_message_text(f"Введите пару для удаления:\n\nДоступные:\n{pairs}")
-        context.user_data["awaiting_pair"] = "remove"
+    elif data == "remove_pair_menu":
+        await show_remove_pair_menu(query, context)
+        return
+    elif data.startswith("add_"):
+        pair = data[4:]  # Убираем "add_"
+        user_settings["monitored_pairs"].add(pair)
+        save_to_gist()
+        await query.answer(f"✅ {pair} добавлена", show_alert=True)
+        await show_settings(query, context)
+        return
+    elif data.startswith("remove_"):
+        pair = data[7:]  # Убираем "remove_"
+        if pair in user_settings["monitored_pairs"]:
+            user_settings["monitored_pairs"].discard(pair)
+            save_to_gist()
+            await query.answer(f"✅ {pair} удалена", show_alert=True)
+        else:
+            await query.answer(f"❌ {pair} не в списке", show_alert=True)
+        await show_settings(query, context)
         return
     elif data == "reset_settings":
         user_settings.update({
@@ -356,36 +417,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         history.clear()
         daily_stats.update({"alerts_count": 0, "max_long": [0, ""], "max_short": [0, ""]})
         save_to_gist()
-        await query.edit_message_text("Настройки сброшены к значениям по умолчанию.")
+        await query.answer("Настройки сброшены к значениям по умолчанию.", show_alert=True)
+        await show_settings(query, context)
+        return
+    elif data == "back_to_settings":
+        await show_settings(query, context)
         return
 
     await show_settings(query, context)
-
-async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if "awaiting_pair" not in context.user_data:
-        return
-
-    action = context.user_data["awaiting_pair"]
-    pair = update.message.text.strip().upper()
-
-    rates = get_funding_rates()
-    if pair not in rates:
-        await update.message.reply_text(f"Пара {pair} не найдена на Gate.io.")
-        return
-
-    if action == "add":
-        user_settings["monitored_pairs"].add(pair)
-        await update.message.reply_text(f"✅ {pair} добавлена в отслеживаемые.")
-    elif action == "remove":
-        if pair in user_settings["monitored_pairs"]:
-            user_settings["monitored_pairs"].discard(pair)
-            await update.message.reply_text(f"✅ {pair} удалена.")
-        else:
-            await update.message.reply_text(f"❌ {pair} не в списке.")
-
-    save_to_gist()
-    del context.user_data["awaiting_pair"]
-    await show_settings(update, context)
 
 # --- Misc ---
 async def handle_unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -420,14 +459,13 @@ def main():
     application.add_handler(MessageHandler(filters.Regex("^📋 Все пары$"), cmd_all))
     application.add_handler(MessageHandler(filters.Regex("^❓ Помощь$"), cmd_help))
 
-    # Callbacks & text
+    # Callbacks
     application.add_handler(CallbackQueryHandler(button_handler))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
 
     # Fallback
     application.add_handler(MessageHandler(filters.ALL, handle_unknown))
 
-    logger.info("🚀 Бот запущен с Gist-поддержкой и без дублей!")
+    logger.info("🚀 Бот запущен с улучшенным интерфейсом настроек!")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
