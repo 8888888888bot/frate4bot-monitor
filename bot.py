@@ -158,7 +158,7 @@ def format_funding_rate(pair: str, fr: float) -> str:
 
 MAIN_MENU = ReplyKeyboardMarkup(
     [
-        ["📈 Статус"],  # Только одна кнопка — "Статус"
+        ["📈 Статус"],
         ["📋 Все пары", "🔔 Настройки"],
         ["❓ Помощь"]
     ],
@@ -362,7 +362,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await show_settings(query, context)
 
 async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if "awaiting_pair" not in context.user_data:  # ✅ Есть двоеточие и .user_data
+    if "awaiting_pair" not in context.user_data:
         return
 
     action = context.user_data["awaiting_pair"]
@@ -388,15 +388,11 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await show_settings(update, context)
 
 # --- Misc ---
-async def handle_refresh(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔄 Обновляю данные...")
-    await cmd_status(update, context)
-
 async def handle_unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if "awaiting_pair" in context.user_
+    if "awaiting_pair" in context.user_data:
         await handle_text_input(update, context)
     else:
-        await update.message.reply_text("Неизвестная команда. Используйте меню.")
+        await update.message.reply_text("Неизвестная команда. Используйте меню.", reply_markup=MAIN_MENU)
 
 # --- Init ---
 async def post_init(application: Application):
