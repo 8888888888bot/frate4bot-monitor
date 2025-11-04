@@ -153,12 +153,12 @@ def format_funding_rate(pair: str, fr: float) -> str:
     return f"{pair}: {fr:.6f} {emoji} {trend}"
 
 # ======================
-# MAIN MENU
+# MAIN MENU (БЕЗ ДУБЛЕЙ!)
 # ======================
 
 MAIN_MENU = ReplyKeyboardMarkup(
     [
-        ["📈 Статус", "🔄 Обновить сейчас"],
+        ["📈 Статус"],  # Только одна кнопка — "Статус"
         ["📋 Все пары", "🔔 Настройки"],
         ["❓ Помощь"]
     ],
@@ -420,7 +420,6 @@ def main():
 
     # Menu buttons
     application.add_handler(MessageHandler(filters.Regex("^🔔 Настройки$"), show_settings))
-    application.add_handler(MessageHandler(filters.Regex("^🔄 Обновить сейчас$"), handle_refresh))
     application.add_handler(MessageHandler(filters.Regex("^📈 Статус$"), cmd_status))
     application.add_handler(MessageHandler(filters.Regex("^📋 Все пары$"), cmd_all))
     application.add_handler(MessageHandler(filters.Regex("^❓ Помощь$"), cmd_help))
@@ -432,7 +431,7 @@ def main():
     # Fallback
     application.add_handler(MessageHandler(filters.ALL, handle_unknown))
 
-    logger.info("🚀 Бот запущен с Gist-поддержкой!")
+    logger.info("🚀 Бот запущен с Gist-поддержкой и без дублей!")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
