@@ -1,60 +1,26 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MMALERT — Защита от манипуляций</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="container">
-    <h1>🛡️ MMALERT</h1>
-    <p class="subtitle">Автоматический мониторинг манипуляций на крипторынке</p>
+<!-- Поиск токена по символу -->
+<div class="card">
+  <h2>🔍 Найти токен</h2>
+  <label>Символ (например, PEPE, WIF):</label>
+  <input type="text" id="symbol-input" placeholder="PEPE" maxlength="10" />
+  <button onclick="searchToken()">Найти</button>
+  <div id="search-result"></div>
+</div>
 
-    <!-- Ценовой блок -->
-    <div class="card">
-      <h2>📊 PEPE/USDT</h2>
-      <p id="price">Загрузка...</p>
-      <p id="change">—</p>
-      <p id="volume">Объём: —</p>
-      <p id="last-update">Обновлено: —</p>
-    </div>
-
-    <!-- Алерт-панель -->
-    <div id="alerts" class="card alert-panel" style="display:none;">
-      <h2>🚨 Алерты</h2>
-      <!-- заполняется скриптом -->
-    </div>
-
-    <!-- Валидация -->
-    <div class="card">
-      <h2>🔍 Проверка контракта</h2>
-      <label>Сеть:</label>
-      <select id="network-select">
-        <option value="ethereum">Ethereum</option>
-        <option value="bsc">BSC</option>
-        <option value="arbitrum">Arbitrum</option>
-        <option value="avalanche">Avalanche</option>
-      </select>
-      <label>Адрес контракта:</label>
-      <input type="text" id="contract-input" placeholder="0x..." />
-      <button onclick="validateToken()">Проверить</button>
-      <div id="validation-result"></div>
-    </div>
-
-    <!-- История аномалий -->
-    <div class="card">
-      <h2>🔍 Последние аномалии</h2>
-      <div id="anomaly-log"></div>
-    </div>
-
-    <!-- История цен -->
-    <div class="card">
-      <h2>📈 История цен (10)</h2>
-      <div id="history"></div>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
-</body>
-</html>
+<!-- Валидация (остаётся) -->
+<div class="card">
+  <h2>✅ Проверка контракта</h2>
+  <label>Сеть:</label>
+  <select id="network-select">
+    <option value="ethereum">Ethereum</option>
+    <option value="bsc">BSC</option>
+    <option value="arbitrum">Arbitrum</option>
+    <option value="avalanche">Avalanche</option>
+    <option value="polygon">Polygon</option>
+    <option value="optimism">Optimism</option>
+  </select>
+  <label>Адрес контракта:</label>
+  <input type="text" id="contract-input" placeholder="0x..." />
+  <button onclick="validateToken()">Проверить</button>
+  <div id="validation-result"></div>
+</div>
