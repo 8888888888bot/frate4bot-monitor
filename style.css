@@ -1,58 +1,16 @@
-body {
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #f5f7fa;
-  margin: 0;
-  padding: 16px;
-  color: #333;
+.alert-panel {
+  background: #fff8e1;
+  border-left: 4px solid #ffc107;
 }
-.container {
-  max-width: 600px;
-  margin: 0 auto;
-}
-h1 {
-  text-align: center;
-  color: #2c3e50;
-}
-.subtitle {
-  text-align: center;
-  color: #7f8c8d;
-  margin-bottom: 24px;
-}
-.card {
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-.card h2 {
-  margin-top: 0;
-  font-size: 18px;
-}
-input, select, button {
-  width: 100%;
-  padding: 10px;
-  margin: 8px 0;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  box-sizing: border-box;
-}
-button {
-  background: #3498db;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-button:hover {
-  background: #2980b9;
-}
-#validation-result {
-  margin-top: 12px;
+.result-official {
+  background: #e8f5e9;
   padding: 10px;
   border-radius: 6px;
+  color: #2e7d32;
 }
-#history {
-  max-height: 150px;
-  overflow-y: auto;
-  font-size: 14px;
+.result-fake {
+  background: #ffebee;
+  padding: 10px;
+  border-radius: 6px;
+  color: #c62828;
 }
