@@ -2,64 +2,45 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#121212">
-  <title>frate4bot — funding rates</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>frate4bot.app — Мониторинг PEPE</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="manifest.json">
-  <style>
-    /* Critical CSS для мгновенной загрузки */
-    body { background: #121212; color: white; font-family: system-ui; padding: 16px; }
-    .container { max-width: 600px; margin: 0 auto; }
-  </style>
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>📊 frate4bot — ставки финансирования</h1>
-      <p class="subtitle">Обновление каждые <span id="interval-display">90</span> сек</p>
-    </header>
+    <h1>📈 frate4bot.app</h1>
+    <p class="subtitle">Мониторинг и защита от фейковых токенов</p>
 
-    <div class="controls">
-      <div class="control-group">
-        <label>Интервал:
-          <select id="interval">
-            <option value="30">30 сек</option>
-            <option value="60">60 сек</option>
-            <option value="90" selected>90 сек</option>
-            <option value="180">180 сек</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="thresholds">
-        <div class="threshold">
-          <span>LONG</span>
-          <div class="btn-group">
-            <button id="longMinus">-</button>
-            <span id="longVal">-0.00100</span>
-            <button id="longPlus">+</button>
-          </div>
-        </div>
-        <div class="threshold">
-          <span>SHORT</span>
-          <div class="btn-group">
-            <button id="shortMinus">-</button>
-            <span id="shortVal">+0.00100</span>
-            <button id="shortPlus">+</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="pair-controls">
-        <input type="text" id="newPair" placeholder="Добавить пару (например, BTC_USDT)">
-        <button id="addPair">+</button>
-        <button id="exportBtn">📤 CSV</button>
-      </div>
+    <!-- Мониторинг цены -->
+    <div class="card">
+      <h2>📊 Текущая цена PEPE/USDT</h2>
+      <p id="price">Загрузка...</p>
+      <p id="change">—</p>
+      <p id="last-update">Обновлено: —</p>
     </div>
 
-    <div id="status">Загрузка…</div>
-    <div id="pairs"></div>
+    <!-- Валидация контракта -->
+    <div class="card">
+      <h2>🔍 Проверка токена</h2>
+      <label>Сеть:</label>
+      <select id="network-select">
+        <option value="ethereum">Ethereum</option>
+        <option value="bsc">BSC</option>
+        <option value="arbitrum">Arbitrum</option>
+        <option value="avalanche">Avalanche</option>
+      </select>
+
+      <label>Адрес контракта:</label>
+      <input type="text" id="contract-input" placeholder="0x..." />
+      <button onclick="validateToken()">Проверить</button>
+      <div id="validation-result"></div>
+    </div>
+
+    <!-- История -->
+    <div class="card">
+      <h2>📁 История</h2>
+      <div id="history"></div>
+    </div>
   </div>
 
   <script src="script.js"></script>
